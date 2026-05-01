@@ -1,0 +1,13 @@
+{
+    "configuration": "default",
+    "documentId": "04c29f787d3b54fbfb9a6525",
+    "documentMicroversion": "8903c9daba1e8dc09bfdc423",
+    "elementId": "d6ace8ae31bf083ba6853476",
+    "fullConfiguration": "default",
+    "id": "M7rV4G7x8PehWi6nl",
+    "isStandardContent": false,
+    "name": "Wrist_Roll_Pitch_08i <1>",
+    "partId": "JFD",
+    "suppressed": false,
+    "type": "Part"
+}

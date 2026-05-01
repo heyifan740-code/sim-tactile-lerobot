@@ -1,0 +1,39 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.egg
+*.egg-info/
+dist/
+build/
+*.so
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Logs and outputs
+outputs/
+logs/
+wandb/
+*.log
+
+# Isaac Sim cache
+_cache/
+_isaac_sim/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Large datasets (store elsewhere or use DVC/LFS)
+datasets/

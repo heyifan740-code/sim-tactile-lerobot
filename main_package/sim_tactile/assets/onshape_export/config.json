@@ -1,0 +1,30 @@
+{
+  "_doc_url": "https://cad.onshape.com/documents/04c29f787d3b54fbfb9a6525/w/c9d62c1d4c7b79404435ea6b/e/8f83782a5cf94ceea58f536c",
+  "documentId": "04c29f787d3b54fbfb9a6525",
+  "versionId": "",
+  "workspaceId": "c9d62c1d4c7b79404435ea6b",
+  "drawFrames": false,
+  "assemblyName": "",
+
+  "outputFormat": "urdf",
+  "robotName": "so100_follower_tactile",
+
+  "useFixedLinks": false,
+  "simplifySTLs": true,
+  "maxSTLSize": 3,
+  "pureShapeDilatation": 0.0,
+
+  "jointMaxEffort": 1.5,
+  "jointMaxVelocity": 22,
+  "noDynamics": false,
+  "packageName": "",
+  "addDummyBaseLink": true,
+
+  "_notes": [
+    "API key/secret are NOT stored here. Either export ONSHAPE_API_KEY / ONSHAPE_API_SECRET in your shell, or put them in ~/.config/onshape-to-robot/config.json .",
+    "Run from this directory:  onshape-to-robot .",
+    "Output will be  robot.urdf  plus meshes in this folder; we'll move/rename into assets/gripper_so100_tactile/ afterwards.",
+    "If the sensor pad body in Onshape is named explicitly, add  \"mergeSTLs\": \"visual\"  or  \"noFrames\": []  to preserve the Wrist_Roll_08c link as its own URDF link.",
+    "Reference: https://onshape-to-robot.readthedocs.io/"
+  ]
+}
