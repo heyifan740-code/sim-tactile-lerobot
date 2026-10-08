@@ -88,6 +88,7 @@ class IsaacSimSO100TactileFollower(Robot):
         self._action_period_ema: float | None = None
         self._warned_fps_mismatch = False
         self._tactile_panel = None
+        self._taxel_markers: dict[str, Any] = {}
 
     # ------------------------------------------------------------------
     # Feature schemas
@@ -287,6 +288,9 @@ class IsaacSimSO100TactileFollower(Robot):
                     title=f"SO100 Tactile Heatmap ({pad_name})",
                 ),
             )
+
+        if not self.config.headless:
+            self._create_taxel_markers()
 
         self.configure()
         self._connected = True
@@ -679,6 +683,8 @@ class IsaacSimSO100TactileFollower(Robot):
                 obs[obs_key] = np.zeros(pad_cfg.shape, dtype=np.float32)
 
         self._obs_count += 1
+        for pad_name, markers in self._taxel_markers.items():
+            self._update_taxel_markers(markers, pad_name, obs[f"{OBS_TACTILE}.{pad_name}"])
         if self._tactile_panel is not None and self._tactile_panel[1] is not None:
             key, panel = self._tactile_panel
             if key in obs:
@@ -695,17 +701,50 @@ class IsaacSimSO100TactileFollower(Robot):
                 )
         return obs
 
+    def _create_taxel_markers(self) -> None:
+        """Viewport spheres at the taxels: red where the observation reports contact, blue elsewhere."""
+        import isaaclab.sim as sim_utils
+        from isaaclab.markers import VisualizationMarkers, VisualizationMarkersCfg
+
+        from .tactile_pad import DEFAULT_TACTILE_DEBUG_POINT_RADIUS_M as r
+
+        for pad_name in self._tactile_sensors:
+            self._taxel_markers[pad_name] = VisualizationMarkers(
+                VisualizationMarkersCfg(
+                    prim_path=f"/Visuals/TactileTaxels/{pad_name}",
+                    markers={
+                        "no_contact": sim_utils.SphereCfg(
+                            radius=r, visual_material=sim_utils.PreviewSurfaceCfg(diffuse_color=(0.2, 0.4, 1.0))
+                        ),
+                        "contact": sim_utils.SphereCfg(
+                            radius=r, visual_material=sim_utils.PreviewSurfaceCfg(diffuse_color=(1.0, 0.0, 0.0))
+                        ),
+                    },
+                )
+            )
+
+    def _update_taxel_markers(self, markers: Any, pad_name: str, tactile_obs: np.ndarray) -> None:
+        import torch
+
+        points = self._tactile_sensors[pad_name][0].data.tactile_points_w_per_sensor
+        if points is None:
+            return
+        contact = torch.as_tensor((np.asarray(tactile_obs).reshape(-1) > 0).astype(np.int64), device=points.device)
+        markers.visualize(translations=points[0, 0, :, :3], marker_indices=contact)
+
     @staticmethod
     def _read_combined_tactile_fn(sensors: list[Any]) -> np.ndarray | None:
-        """Per-taxel max of fn over the per-target sensors (env 0, flattened)."""
-        fn_per_target = [
-            s.data.tactile_points_w_per_sensor[0, 0, :, 3].detach().float().cpu().numpy()
-            for s in sensors
-            if s.data.tactile_points_w_per_sensor is not None
-        ]
-        if not fn_per_target:
+        """Raw counts (env 0, flattened) from the signed distance to the closest target."""
+        from .tactile_pad import raw_counts_from_sdf
+
+        sdf_per_target = []
+        for s in sensors:
+            if s.data.tactile_points_w_per_sensor is None:  # .data also refreshes the buffers
+                continue
+            sdf_per_target.append(s._sdf_out[0, 0].detach().float().cpu().numpy())  # upstream signed sdf buffer
+        if not sdf_per_target:
             return None
-        return np.max(np.stack(fn_per_target, axis=0), axis=0)
+        return raw_counts_from_sdf(np.min(np.stack(sdf_per_target, axis=0), axis=0))
 
     def send_action(self, action: RobotAction) -> RobotAction:
         if not self._connected:

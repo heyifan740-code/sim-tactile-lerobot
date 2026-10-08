@@ -216,7 +216,7 @@ def main() -> None:
         prim_path="/World/Arm",
         elastomer_prim_paths=[f"/World/Arm/{_PAD_LINK}"],
         target_mesh_prim_path=target_mesh_prim_path,
-        # Same contact model as the robot (tactile_pad.py), shown as counts / 255.
+        # Outside-contact part of the robot's model (tactile_pad.py), shown as counts / 255.
         mesh_use_signed_distance=False,
         mesh_signed_distance_method="normal",
         mesh_shell_thickness=DEFAULT_TACTILE_SHELL_M,

@@ -148,11 +148,10 @@ The sim is lock-stepped: each frame advances the physics by exactly 1/fps. A slo
 
 ## Tactile model
 
-- **Geometry:** a 12×32 taxel grid with a 28 mm / 12 = 2.33 mm pitch, 28 × 74.7 mm in total. It sits on `wrist_roll_tactile_pad_link`, 1 mm below the inner face of the fixed jaw.
-- **Distance:** the upstream `WarpSdfTactileSensor` computes the unsigned distance *d* from each taxel to the Table, Hole and Peg meshes. It handles one mesh per sensor, so the plugin builds one sensor per target and takes the per-taxel maximum.
-- **Raw counts:** `clamp(K · (1.5 mm − d), 0, 255)`, with K set so that a resting contact (d ≈ 0.4 mm) gives about 125 counts, which is threshold 25 plus full scale 100. The pad responds only within about 0.9 mm of real contact.
-  This is equivalent to the upstream signed rule (penetration = max(−sdf, 0)) applied to a taxel layer lifted above the jaw collider. Rigid objects stop at the collider, which lies about 0.2–0.5 mm above the taxels, so d only shrinks as an object closes in on the pad.
-- **Jaw collider:** the arm USD uses **convex decomposition**. With a convex hull, the hull of the concave fixed jaw bulged up to 24 mm over the pad, so perpendicular grasps stopped in mid-air above the sensor. Regenerate the USD with `python tools/convert_urdf_to_usd.py`.
+- **Geometry:** a 12×32 taxel grid with a 28 mm / 12 = 2.33 mm pitch, 28 × 74.7 mm in total, on `wrist_roll_tactile_pad_link`. Each taxel is a sphere of radius 1.17 mm (half the pitch) resting on the inner face of the fixed jaw. The distance is measured from the sphere centre.
+- **Distance:** the upstream `WarpSdfTactileSensor` computes the **signed** (winding-number) distance *sdf* from each taxel to the Table, Hole and Peg meshes: positive outside, negative inside. It handles one mesh per sensor, so the plugin builds one sensor per target and keeps the closest one. Target meshes must be watertight (true for the built-in peg, hole and table).
+- **Raw counts:** `clamp(K · (r − sdf), 0, 255)`, where r is the taxel radius. The signal starts when an object touches a sphere, reaches 125 counts (threshold 25 plus full scale 100 of the real sensor) when the object has pressed the sphere all the way to the jaw face, and keeps growing beyond that. It is continuous and monotonic, so deep contact never loses signal.
+- **Jaw collider:** the arm USD uses **convex decomposition**, with shrink-wrap on the jaw links, so objects rest on the real jaw face, i.e. on the taxels. A plain convex hull bulged up to 24 mm over the pad, and the default decomposition still sat about 1.5 mm proud of the face. Regenerate the USD with `python tools/convert_urdf_to_usd.py`.
 - **Observation:** `flexitac.FlexiTacSensor._normalize`, the real driver's normalization with threshold 25 and noise_scale 30. Contact frames are therefore peak-normalized to max = 1, exactly like real `lerobot_tactile` data.
 - **Metadata:** the threshold, noise_scale and pad geometry are written to `info.json → tactile_sensors`.
 

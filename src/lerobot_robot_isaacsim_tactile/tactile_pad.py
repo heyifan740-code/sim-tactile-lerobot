@@ -20,18 +20,26 @@ DEFAULT_TACTILE_TARGET_WIDTH_POINT_COUNT = 12
 DEFAULT_TACTILE_POINT_DISTANCE_M = DEFAULT_TACTILE_TARGET_WIDTH_M / float(DEFAULT_TACTILE_TARGET_WIDTH_POINT_COUNT)
 DEFAULT_TACTILE_TARGET_LENGTH_M = DEFAULT_TACTILE_POINT_DISTANCE_M * 32.0
 DEFAULT_TACTILE_NORMAL_AXIS = 2
-# Taxel layer offset along the pad normal (visually calibrated). Objects stop at the jaw collider,
-# ~0.2-0.5 mm above the taxels (measured).
-DEFAULT_TACTILE_NORMAL_OFFSET_M = -0.001
-DEFAULT_TACTILE_DEBUG_POINT_RADIUS_M = 0.5 * DEFAULT_TACTILE_POINT_DISTANCE_M
+# Each taxel is drawn as a sphere of half the pitch; the spheres rest on the jaw's inner face.
+DEFAULT_TACTILE_TAXEL_RADIUS_M = 0.5 * DEFAULT_TACTILE_POINT_DISTANCE_M
+DEFAULT_TACTILE_DEBUG_POINT_RADIUS_M = DEFAULT_TACTILE_TAXEL_RADIUS_M
+_JAW_FACE_NORMAL_OFFSET_M = -0.00218  # patch-plane offset that puts taxel centres on the jaw face (measured)
+DEFAULT_TACTILE_NORMAL_OFFSET_M = _JAW_FACE_NORMAL_OFFSET_M + DEFAULT_TACTILE_TAXEL_RADIUS_M
 DEFAULT_TACTILE_IDLE_BOX_POS_W = (10.0, 10.0, 10.0)
-# Raw counts: clamp(COUNTS_PER_M * (SHELL - d), 0, 255), d = unsigned taxel-to-object distance.
-# Equivalent to the upstream penetration rule for a taxel layer lifted just above the collider.
-# A resting contact (d ~ 0.4 mm) gives ~125 counts (threshold 25 + full scale 100 of flexitac);
-# the threshold is reached at d ~ 1.28 mm, i.e. within ~0.9 mm of actual contact.
-DEFAULT_TACTILE_SHELL_M = 0.0015
-DEFAULT_TACTILE_COUNTS_PER_M = 125.0 / (DEFAULT_TACTILE_SHELL_M - 0.0004)
+# Raw counts = clamp(COUNTS_PER_M * (SHELL - sdf), 0, 255), sdf = signed (winding) distance from the
+# taxel centre to the object (> 0 outside, < 0 inside); continuous and monotonic in contact depth.
+# SHELL = taxel radius: counts start when the object touches the sphere, reach 125 (= threshold 25 +
+# full scale 100 of flexitac) when it reaches the jaw face (sphere fully pressed) and keep growing beyond.
+DEFAULT_TACTILE_SHELL_M = DEFAULT_TACTILE_TAXEL_RADIUS_M
+DEFAULT_TACTILE_COUNTS_PER_M = 125.0 / (2.0 * DEFAULT_TACTILE_TAXEL_RADIUS_M)
 DEFAULT_TACTILE_MAX_COUNTS = 255.0  # uint8 ADC range of the real sensor
+
+
+def raw_counts_from_sdf(sdf_m):
+    """Raw ADC-like counts from signed taxel distances (metres); see DEFAULT_TACTILE_COUNTS_PER_M."""
+    import numpy as np
+
+    return np.clip(DEFAULT_TACTILE_COUNTS_PER_M * (DEFAULT_TACTILE_SHELL_M - sdf_m), 0.0, DEFAULT_TACTILE_MAX_COUNTS)
 
 if TYPE_CHECKING:
     from .config_isaacsim_so100_tactile_follower import SimTactilePadConfig
@@ -176,7 +184,7 @@ def build_tactile_pad_sensor(
     _, _, _ = table_size_m
 
     sensors = []
-    for i, target_mesh_prim_path in enumerate(resolved_target_mesh_paths or [None]):
+    for target_mesh_prim_path in resolved_target_mesh_paths or [None]:
         cfg = WarpSdfTactileSensorCfg(
             prim_path=arm_prim_path,
             update_period=0,
@@ -190,25 +198,14 @@ def build_tactile_pad_sensor(
             patch_offset_pos_b=tuple(float(v) for v in pad_cfg.pad_offset),
             patch_offset_quat_b=tuple(float(v) for v in pad_cfg.pad_quat),
             target_mesh_prim_path=target_mesh_prim_path,
-            # penetration = shell - |sdf| (see DEFAULT_TACTILE_COUNTS_PER_M)
-            mesh_use_signed_distance=False,
-            mesh_signed_distance_method="normal",   # unused in unsigned mode
-            mesh_shell_thickness=DEFAULT_TACTILE_SHELL_M,
+            # Only the signed distance is used (raw_counts_from_sdf); target meshes must be watertight.
+            mesh_use_signed_distance=True,
+            mesh_signed_distance_method="winding",
             # No resolvable mesh query target — fall back to far-away idle box to avoid false triggers.
             box_pos_w=DEFAULT_TACTILE_IDLE_BOX_POS_W,
             box_quat_w=(1.0, 0.0, 0.0, 0.0),
             box_half_extents=(0.001, 0.001, 0.001),
-            # fn = raw counts; the follower applies the flexitac normalization.
-            stiffness=DEFAULT_TACTILE_COUNTS_PER_M,
-            max_force=DEFAULT_TACTILE_MAX_COUNTS,
-            normalize_forces=False,
-            # Viewport markers: sensor 0 draws all taxels (blue), the others only contacts (red,
-            # slightly larger so they render on top).
-            debug_vis=True,
-            debug_vis_show_all_taxels=(i == 0),
-            debug_vis_show_axes=False,
-            debug_vis_axes_scale=0.025,
-            debug_vis_point_radius=DEFAULT_TACTILE_DEBUG_POINT_RADIUS_M * (1.0 + 0.05 * i),
+            debug_vis=False,  # the follower draws the taxel markers from the final observation
         )
         sensors.append(WarpSdfTactileSensor(cfg=cfg))
     return sensors

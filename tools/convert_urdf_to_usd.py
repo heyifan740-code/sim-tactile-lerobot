@@ -14,6 +14,7 @@ from pathlib import Path
 from isaaclab.app import AppLauncher
 
 ASSET = Path(__file__).resolve().parents[1] / "src/lerobot_robot_isaacsim_tactile/assets/gripper_so100_tactile"
+JAW_LINKS = ("gripper_link", "moving_jaw_link")
 
 parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
 parser.add_argument("--out-dir", type=str, default=str(ASSET / "usd"))
@@ -40,5 +41,23 @@ cfg = UrdfConverterCfg(
     collider_type=args.collider_type,
     self_collision=False,
 )
-print(f"[convert] {UrdfConverter(cfg).usd_path}  (collider_type={args.collider_type})", flush=True)
+usd_path = UrdfConverter(cfg).usd_path
+
+# Tighten the jaw colliders: default convex decomposition sits ~1.5 mm proud of the jaw faces, so objects
+# would stop above the tactile pad. shrinkWrap projects the hull vertices back onto the mesh surface.
+if args.collider_type == "convex_decomposition":
+    from pxr import PhysxSchema, Usd, UsdPhysics
+
+    physics = Path(usd_path).parent / "configuration" / (Path(usd_path).stem + "_physics.usd")
+    stage = Usd.Stage.Open(str(physics))
+    for prim in stage.Traverse():
+        if any(f"/colliders/{link}/" in str(prim.GetPath()) for link in JAW_LINKS) and prim.HasAPI(UsdPhysics.MeshCollisionAPI):
+            api = PhysxSchema.PhysxConvexDecompositionCollisionAPI.Apply(prim)
+            api.CreateShrinkWrapAttr(True)
+            api.CreateMaxConvexHullsAttr(64)
+            api.CreateVoxelResolutionAttr(2_000_000)
+            api.CreateErrorPercentageAttr(1.0)
+            print(f"[convert] tight decomposition: {prim.GetPath()}", flush=True)
+    stage.GetRootLayer().Save()
+print(f"[convert] {usd_path}  (collider_type={args.collider_type})", flush=True)
 app.close()
