@@ -1,0 +1,18 @@
+[build-system]
+requires = ["setuptools>=64"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "lerobot_robot_isaacsim_tactile"
+version = "0.1.0"
+description = "Isaac Sim SO100 follower with a FlexiTac tactile pad, as a LeRobot robot plugin."
+readme = "README.md"
+requires-python = ">=3.11"
+# lerobot (TNA001-AI/lerobot_tactile) and Isaac Sim / IsaacLab are installed separately, see README.
+dependencies = ["flexitac>=0.3.0", "trimesh"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+lerobot_robot_isaacsim_tactile = ["assets/**/*", "warp_sdf_tactile/UPSTREAM.md"]

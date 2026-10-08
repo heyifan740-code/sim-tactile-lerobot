@@ -1,4 +1,4 @@
-[submodule "main_package/sim_tactile/_vendor/lerobot_tactile"]
-	path = main_package/sim_tactile/_vendor/lerobot_tactile
+[submodule "third_party/lerobot_tactile"]
+	path = third_party/lerobot_tactile
 	url = https://github.com/TNA001-AI/lerobot_tactile.git
-	branch = new-sync
+	branch = main

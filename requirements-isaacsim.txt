@@ -1,0 +1,22 @@
+# Runtime deps of lerobot_tactile for the Isaac Sim 5.1 / Python 3.11 env.
+# lerobot_tactile itself is installed with --no-deps, because its own pins (numpy>=2, torch<2.11, ...)
+# would replace the numpy/torch builds Isaac Sim needs. These versions were verified together.
+accelerate==1.13.0
+av==17.0.1
+datasets==4.8.5
+deepdiff==9.0.0
+diffusers==0.35.2
+draccus==0.10.0
+einops==0.8.2
+feetech-servo-sdk==1.0.0
+flexitac==0.3.1
+gymnasium==1.2.1
+huggingface_hub==1.9.1
+imageio==2.37.0
+imageio-ffmpeg==0.6.0
+jsonlines==4.0.0
+pynput==1.8.1
+pyserial==3.5
+rerun-sdk==0.31.3
+termcolor==3.3.0
+trimesh==4.5.1

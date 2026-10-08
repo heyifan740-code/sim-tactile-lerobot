@@ -37,3 +37,6 @@ Thumbs.db
 
 # Large datasets (store elsewhere or use DVC/LFS)
 datasets/
+
+# Secrets (Onshape API keys for onshape-to-robot)
+.env
