@@ -1,7 +1,7 @@
 # sim-tactile-lerobot
 
-Lets you run the [LeFlexiTac](https://tna001-ai.github.io/LeFlexiTac/) tactile workflow in **Isaac Sim**.
-It ships as a **LeRobot robot plugin**: you keep using the official lerobot commands (`lerobot-calibrate`, `lerobot-teleoperate`, `lerobot-record`, `lerobot-train`). Where the real setup says `--robot.type=so_tactile_follower`, you pass `--robot.type=isaacsim_so100_tactile_follower` instead.
+Run the [LeFlexiTac](https://tna001-ai.github.io/LeFlexiTac/) tactile workflow in **Isaac Sim**.
+It ships as a **LeRobot robot plugin**: keep using the official lerobot commands (`lerobot-calibrate`, `lerobot-teleoperate`, `lerobot-record`, `lerobot-train`). Where the real setup says `--robot.type=so_tactile_follower`, pass `--robot.type=isaacsim_so100_tactile_follower` instead.
 
 A physical SO100/SO101 **leader arm** drives a simulated SO100 follower. The follower carries a 12×32 FlexiTac tactile pad on the fixed jaw.
 The recorded datasets have the same schema as the real-robot datasets: `action`, `observation.state`, `observation.images.top` (480×640) and `observation.tactile.primary` (12×32, float32). Policies train with the unmodified lerobot training code.
