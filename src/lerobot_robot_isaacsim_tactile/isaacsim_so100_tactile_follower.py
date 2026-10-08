@@ -106,8 +106,7 @@ class IsaacSimSO100TactileFollower(Robot):
 
     @property
     def cameras(self) -> dict[str, Any]:
-        # lerobot_record sizes its image-writer pool with len(robot.cameras) before connect();
-        # the scene always builds the "top" camera.
+        # lerobot_record reads len(robot.cameras) before connect(); the scene always builds "top".
         return self._cameras or {"top": None}
 
     @cached_property
@@ -198,8 +197,7 @@ class IsaacSimSO100TactileFollower(Robot):
             {"headless": self.config.headless, "device": self.config.device, "enable_cameras": True}
         )
         self._app = launcher.app
-        # lerobot scripts only call disconnect(); close Kit when the process exits
-        # (after lerobot_record has finalized / pushed the dataset).
+        # lerobot scripts only call disconnect(); close Kit at process exit (after dataset push).
         atexit.register(self.close_app)
 
         # Build scene (ground + table + arm + cameras)
@@ -216,7 +214,7 @@ class IsaacSimSO100TactileFollower(Robot):
         from flexitac import FlexiTacSensor
 
         for pad_name, pad_cfg in self.config.tactile_pads.items():
-            # Never opened: only `_normalize` is used, with a zero baseline (sim counts are already above baseline).
+            # Never opened; only its `_normalize` is used (sim counts are already above baseline).
             self._tactile_normalizers[pad_name] = FlexiTacSensor(
                 port="isaacsim",
                 rows=int(pad_cfg.shape[0]),
@@ -292,8 +290,7 @@ class IsaacSimSO100TactileFollower(Robot):
 
         self.configure()
         self._connected = True
-        # Warm-up: the first camera render / Warp kernel launch takes ~0.5 s; do it here
-        # instead of inside the first recorded frame.
+        # Warm-up so the first render / Warp kernel launch does not stall the first recorded frame.
         self.get_observation()
         self._obs_count = 0
         logger.info(
@@ -724,7 +721,7 @@ class IsaacSimSO100TactileFollower(Robot):
                 clamped_joint_value = self._clamp_user_joint_value(joint, float(action[key]))
                 self._joint_target[0, idx] = self._user_to_sim_joint_value(joint, clamped_joint_value)
 
-        # Step sim `decimation` times; render only on the last sub-step (cameras are read once per control step).
+        # Advance 1/fps of sim time; render only on the last sub-step.
         for i in range(self._decimation):
             self._arm.set_joint_position_target(self._joint_target)
             self._arm.write_data_to_sim()

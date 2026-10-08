@@ -36,8 +36,7 @@ cfg = UrdfConverterCfg(
         target_type="position",
         gains=UrdfConverterCfg.JointDriveCfg.PDGainsCfg(stiffness=100.0, damping=1.0),
     ),
-    # The fixed jaw (wrist_roll_08c) is concave: its convex hull bulges up to ~24 mm over the
-    # tactile pad, so objects pressed onto the pad stop in mid-air. Decomposition follows the pad face.
+    # The fixed jaw is concave; its convex hull would cover the tactile pad.
     collider_type=args.collider_type,
     self_collision=False,
 )

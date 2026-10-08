@@ -20,20 +20,15 @@ DEFAULT_TACTILE_TARGET_WIDTH_POINT_COUNT = 12
 DEFAULT_TACTILE_POINT_DISTANCE_M = DEFAULT_TACTILE_TARGET_WIDTH_M / float(DEFAULT_TACTILE_TARGET_WIDTH_POINT_COUNT)
 DEFAULT_TACTILE_TARGET_LENGTH_M = DEFAULT_TACTILE_POINT_DISTANCE_M * 32.0
 DEFAULT_TACTILE_NORMAL_AXIS = 2
-# Taxel layer position along the pad normal (visually calibrated). The taxels then sit 1.18 mm
-# above the jaw's raw inner face. The jaw *collider* (convex decomposition) is slightly inflated,
-# so objects actually stop ~0.2-0.5 mm above the taxels (measured by dropping/grasping the peg).
+# Taxel layer offset along the pad normal (visually calibrated). Objects stop at the jaw collider,
+# ~0.2-0.5 mm above the taxels (measured).
 DEFAULT_TACTILE_NORMAL_OFFSET_M = -0.001
 DEFAULT_TACTILE_DEBUG_POINT_RADIUS_M = 0.5 * DEFAULT_TACTILE_POINT_DISTANCE_M
 DEFAULT_TACTILE_IDLE_BOX_POS_W = (10.0, 10.0, 10.0)
-# Raw-count model (pre-normalization), unsigned distance d from taxel to object surface:
-#   counts = clamp(COUNTS_PER_M * (SHELL - d), 0, 255)
-# Rigid objects cannot pass the jaw collider, which lies just above the taxels, so d only shrinks
-# as an object closes the gap to the pad. This is the upstream signed rule
-# (penetration = max(-sdf, 0) of a taxel layer lifted by SHELL - d_contact) without moving the taxels.
-# Calibration: a resting/grasped contact (d ~ 0.4 mm) gives ~125 counts (threshold 25 + full scale 100
-# of the real FlexiTac normalization). The threshold (25 counts) is reached at d ~ 1.28 mm, i.e. the
-# pad responds only within ~0.9 mm of actual contact.
+# Raw counts: clamp(COUNTS_PER_M * (SHELL - d), 0, 255), d = unsigned taxel-to-object distance.
+# Equivalent to the upstream penetration rule for a taxel layer lifted just above the collider.
+# A resting contact (d ~ 0.4 mm) gives ~125 counts (threshold 25 + full scale 100 of flexitac);
+# the threshold is reached at d ~ 1.28 mm, i.e. within ~0.9 mm of actual contact.
 DEFAULT_TACTILE_SHELL_M = 0.0015
 DEFAULT_TACTILE_COUNTS_PER_M = 125.0 / (DEFAULT_TACTILE_SHELL_M - 0.0004)
 DEFAULT_TACTILE_MAX_COUNTS = 255.0  # uint8 ADC range of the real sensor
@@ -195,7 +190,7 @@ def build_tactile_pad_sensor(
             patch_offset_pos_b=tuple(float(v) for v in pad_cfg.pad_offset),
             patch_offset_quat_b=tuple(float(v) for v in pad_cfg.pad_quat),
             target_mesh_prim_path=target_mesh_prim_path,
-            # Unsigned distance + shell (see DEFAULT_TACTILE_COUNTS_PER_M): penetration = shell - |sdf|.
+            # penetration = shell - |sdf| (see DEFAULT_TACTILE_COUNTS_PER_M)
             mesh_use_signed_distance=False,
             mesh_signed_distance_method="normal",   # unused in unsigned mode
             mesh_shell_thickness=DEFAULT_TACTILE_SHELL_M,
@@ -203,15 +198,12 @@ def build_tactile_pad_sensor(
             box_pos_w=DEFAULT_TACTILE_IDLE_BOX_POS_W,
             box_quat_w=(1.0, 0.0, 0.0, 0.0),
             box_half_extents=(0.001, 0.001, 0.001),
-            # fn = raw counts above baseline (see DEFAULT_TACTILE_COUNTS_PER_M); the follower
-            # applies the real FlexiTac normalization on top.
+            # fn = raw counts; the follower applies the flexitac normalization.
             stiffness=DEFAULT_TACTILE_COUNTS_PER_M,
             max_force=DEFAULT_TACTILE_MAX_COUNTS,
             normalize_forces=False,
-            # IsaacSim viewport: show taxel point-cloud only (axes off — they
-            # visually overlap the pad/peg surfaces during teleop).
-            # Only the first sensor draws the blue no-contact taxels; the others draw
-            # their red contact taxels slightly larger so they render on top.
+            # Viewport markers: sensor 0 draws all taxels (blue), the others only contacts (red,
+            # slightly larger so they render on top).
             debug_vis=True,
             debug_vis_show_all_taxels=(i == 0),
             debug_vis_show_axes=False,
